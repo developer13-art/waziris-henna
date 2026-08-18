@@ -1,28 +1,22 @@
 import React, { Suspense, lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import CustomerLayout from './components/customer/layout/CustomerLayout'
-import AdminLayout from './components/admin/layout/AdminLayout'
-import Loader from './components/common/Loader'
 import { useAuth } from './context/AuthContext'
+import AdminLayout from './components/admin/layout/AdminLayout'
+import CustomerLayout from './components/customer/layout/CustomerLayout'
 
 // Lazy load customer pages
 const HomePage = lazy(() => import('./pages/customer/HomePage'))
 const AboutPage = lazy(() => import('./pages/customer/AboutPage'))
 const ServicesPage = lazy(() => import('./pages/customer/ServicesPage'))
 const DesignsPage = lazy(() => import('./pages/customer/DesignsPage'))
-const DesignDetailPage = lazy(() => import('./pages/customer/DesignDetailPage'))
 const DesignFinderPage = lazy(() => import('./pages/customer/DesignFinderPage'))
 const ProductsPage = lazy(() => import('./pages/customer/ProductsPage'))
-const ProductDetailPage = lazy(() => import('./pages/customer/ProductDetailPage'))
 const CartPage = lazy(() => import('./pages/customer/CartPage'))
 const CheckoutPage = lazy(() => import('./pages/customer/CheckoutPage'))
 const BookingPage = lazy(() => import('./pages/customer/BookingPage'))
-const BookingSuccessPage = lazy(() => import('./pages/customer/BookingSuccessPage'))
 const JournalPage = lazy(() => import('./pages/customer/JournalPage'))
-const ArticleDetailPage = lazy(() => import('./pages/customer/ArticleDetailPage'))
 const FavoritesPage = lazy(() => import('./pages/customer/FavoritesPage'))
 const ContactPage = lazy(() => import('./pages/customer/ContactPage'))
-const PaymentStatusPage = lazy(() => import('./pages/customer/PaymentStatusPage'))
 
 // Lazy load admin pages
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'))
@@ -39,15 +33,26 @@ const AdminJournalPage = lazy(() => import('./pages/admin/AdminJournalPage'))
 const AdminReportsPage = lazy(() => import('./pages/admin/AdminReportsPage'))
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'))
 
+function Loader() {
+  return (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      minHeight: '100vh',
+      background: '#FFF8F0',
+      fontFamily: 'Poppins, sans-serif'
+    }}>
+      <p style={{ color: '#8B5E3C', fontSize: '18px' }}>Loading...</p>
+    </div>
+  )
+}
+
 function AdminRoute({ children }) {
-  const { isAdmin, isLoading } = useAuth()
-  
-  if (isLoading) return <Loader />
-  
+  const { isAdmin } = useAuth()
   if (!isAdmin) {
     return <Navigate to="/admin/login" replace />
   }
-  
   return children
 }
 
@@ -55,29 +60,26 @@ function App() {
   return (
     <Suspense fallback={<Loader />}>
       <Routes>
-        {/* Customer Routes */}
+        {/* ==================== CUSTOMER ROUTES (With Layout) ==================== */}
         <Route element={<CustomerLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/designs" element={<DesignsPage />} />
-          <Route path="/designs/:slug" element={<DesignDetailPage />} />
           <Route path="/design-finder" element={<DesignFinderPage />} />
           <Route path="/products" element={<ProductsPage />} />
-          <Route path="/products/:slug" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/booking" element={<BookingPage />} />
-          <Route path="/booking/success/:reference" element={<BookingSuccessPage />} />
           <Route path="/journal" element={<JournalPage />} />
-          <Route path="/journal/:slug" element={<ArticleDetailPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/payment/:status/:reference" element={<PaymentStatusPage />} />
         </Route>
 
-        {/* Admin Routes */}
+        {/* ==================== ADMIN LOGIN (No Layout) ==================== */}
         <Route path="/admin/login" element={<AdminLoginPage />} />
+
+        {/* ==================== ADMIN ROUTES (With Admin Layout) ==================== */}
         <Route 
           path="/admin" 
           element={
@@ -100,7 +102,7 @@ function App() {
           <Route path="settings" element={<AdminSettingsPage />} />
         </Route>
 
-        {/* Fallback */}
+        {/* ==================== FALLBACK ==================== */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

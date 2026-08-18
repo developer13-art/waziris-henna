@@ -25,9 +25,11 @@ class AuthController
                 } elseif ($action === 'logout') {
                     $this->logout();
                 } else {
-                    Response::error('Invalid auth action', 400);
+                    // If no action specified but it's a POST, try login by default
+                    $this->login();
                 }
                 break;
+                
             case 'GET':
                 if ($action === 'profile') {
                     $this->getProfile();
@@ -35,6 +37,7 @@ class AuthController
                     Response::error('Invalid auth action', 400);
                 }
                 break;
+                
             default:
                 Response::error('Method not allowed', 405);
         }
@@ -71,7 +74,7 @@ class AuthController
         // Update last login
         $this->db->update('users', ['last_login' => date('Y-m-d H:i:s')], (int)$user['id']);
 
-        // Generate token (simple implementation - use JWT in production)
+        // Generate token
         $token = bin2hex(random_bytes(32));
 
         unset($user['password_hash']);
@@ -145,7 +148,6 @@ class AuthController
 
     private function getProfile(): void
     {
-        // In production, verify JWT token first
         $userId = (int)($_GET['user_id'] ?? 0);
 
         if (!$userId) {

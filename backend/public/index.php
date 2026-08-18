@@ -9,7 +9,12 @@ declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/error.log');
+
+$logDir = __DIR__ . '/../logs';
+if (!is_dir($logDir)) {
+    mkdir($logDir, 0755, true);
+}
+ini_set('error_log', $logDir . '/error.log');
 
 // CORS Headers
 header('Access-Control-Allow-Origin: *');
@@ -23,20 +28,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Autoload
-require_once __DIR__ . '/../vendor/autoload.php';
+// Manual Autoloader
+spl_autoload_register(function ($class) {
+    $prefixes = [
+        'Controllers\\' => __DIR__ . '/../src/Controllers/',
+        'Models\\' => __DIR__ . '/../src/Models/',
+        'Middleware\\' => __DIR__ . '/../src/Middleware/',
+        'Services\\' => __DIR__ . '/../src/Services/',
+        'Helpers\\' => __DIR__ . '/../src/Helpers/',
+        'Config\\' => __DIR__ . '/../src/Config/',
+    ];
+
+    foreach ($prefixes as $prefix => $baseDir) {
+        $len = strlen($prefix);
+        if (strncmp($prefix, $class, $len) === 0) {
+            $relativeClass = substr($class, $len);
+            $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+            if (file_exists($file)) {
+                require_once $file;
+            }
+            return;
+        }
+    }
+});
+
+// Load environment variables
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile)) {
+    $envLines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($envLines as $line) {
+        $line = trim($line);
+        if (empty($line) || strpos($line, '#') === 0) continue;
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value, '"\'');
+            if (!getenv($key)) {
+                putenv("{$key}={$value}");
+                $_ENV[$key] = $value;
+            }
+        }
+    }
+}
 
 use Config\Database;
 use Helpers\Response;
-use Middleware\CorsMiddleware;
-use Middleware\AuthMiddleware;
 
-// Initialize
 $database = Database::getInstance();
-$cors = new CorsMiddleware();
-$cors->handle();
 
-// Get request data
+// ==================== ROUTING ====================
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = str_replace('/api', '', $uri);
@@ -45,77 +85,73 @@ $resource = $uriParts[0] ?? '';
 $id = $uriParts[1] ?? null;
 $action = $uriParts[2] ?? null;
 
-// Route the request
+// For /auth/login, the URI parts are: ['auth', 'login']
+// So resource = 'auth', id = 'login', action = null
+// We need to fix this
+
 try {
+    $controllerClass = null;
+
     switch ($resource) {
         case 'auth':
-            require_once __DIR__ . '/../src/Controllers/AuthController.php';
-            $controller = new Controllers\AuthController();
+            $controllerClass = 'Controllers\\AuthController';
+            // For auth routes, the second part IS the action
+            if ($id && !$action) {
+                $action = $id;
+                $id = null;
+            }
             break;
             
         case 'services':
-            require_once __DIR__ . '/../src/Controllers/ServiceController.php';
-            $controller = new Controllers\ServiceController();
+            $controllerClass = 'Controllers\\ServiceController';
             break;
             
         case 'designs':
-            require_once __DIR__ . '/../src/Controllers/DesignController.php';
-            $controller = new Controllers\DesignController();
+            $controllerClass = 'Controllers\\DesignController';
             break;
             
         case 'categories':
-            require_once __DIR__ . '/../src/Controllers/DesignCategoryController.php';
-            $controller = new Controllers\DesignCategoryController();
+            $controllerClass = 'Controllers\\DesignCategoryController';
             break;
             
         case 'products':
-            require_once __DIR__ . '/../src/Controllers/ProductController.php';
-            $controller = new Controllers\ProductController();
+            $controllerClass = 'Controllers\\ProductController';
             break;
             
         case 'bookings':
-            require_once __DIR__ . '/../src/Controllers/BookingController.php';
-            $controller = new Controllers\BookingController();
+            $controllerClass = 'Controllers\\BookingController';
             break;
             
         case 'orders':
-            require_once __DIR__ . '/../src/Controllers/OrderController.php';
-            $controller = new Controllers\OrderController();
+            $controllerClass = 'Controllers\\OrderController';
             break;
             
         case 'payments':
-            require_once __DIR__ . '/../src/Controllers/PaymentController.php';
-            $controller = new Controllers\PaymentController();
+            $controllerClass = 'Controllers\\PaymentController';
             break;
             
         case 'reviews':
-            require_once __DIR__ . '/../src/Controllers/ReviewController.php';
-            $controller = new Controllers\ReviewController();
+            $controllerClass = 'Controllers\\ReviewController';
             break;
             
         case 'journal':
-            require_once __DIR__ . '/../src/Controllers/JournalController.php';
-            $controller = new Controllers\JournalController();
+            $controllerClass = 'Controllers\\JournalController';
             break;
             
         case 'dashboard':
-            require_once __DIR__ . '/../src/Controllers/DashboardController.php';
-            $controller = new Controllers\DashboardController();
+            $controllerClass = 'Controllers\\DashboardController';
             break;
             
         case 'reports':
-            require_once __DIR__ . '/../src/Controllers/ReportController.php';
-            $controller = new Controllers\ReportController();
+            $controllerClass = 'Controllers\\ReportController';
             break;
             
         case 'settings':
-            require_once __DIR__ . '/../src/Controllers/SettingsController.php';
-            $controller = new Controllers\SettingsController();
+            $controllerClass = 'Controllers\\SettingsController';
             break;
             
         case 'customers':
-            require_once __DIR__ . '/../src/Controllers/CustomerController.php';
-            $controller = new Controllers\CustomerController();
+            $controllerClass = 'Controllers\\CustomerController';
             break;
             
         default:
@@ -123,8 +159,12 @@ try {
             exit();
     }
 
-    // Dispatch request
-    $controller->handle($method, $id, $action);
+    if ($controllerClass && class_exists($controllerClass)) {
+        $controller = new $controllerClass();
+        $controller->handle($method, $id, $action);
+    } else {
+        Response::error('Controller not found: ' . $controllerClass, 500);
+    }
 
 } catch (Exception $e) {
     Response::error($e->getMessage(), 500);

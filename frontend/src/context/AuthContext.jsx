@@ -10,24 +10,28 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Load user from localStorage synchronously before rendering
     const savedToken = localStorage.getItem('waziris_token')
     const savedUser = localStorage.getItem('waziris_user')
     
     if (savedToken && savedUser) {
-      setToken(savedToken)
-      setUser(JSON.parse(savedUser))
+      try {
+        setToken(savedToken)
+        setUser(JSON.parse(savedUser))
+      } catch (error) {
+        console.error('Error parsing saved user:', error)
+        localStorage.removeItem('waziris_token')
+        localStorage.removeItem('waziris_user')
+      }
     }
     
+    // Set isLoading to false immediately after loading from localStorage
     setIsLoading(false)
   }, [])
 
   const login = async (email, password) => {
     try {
-      console.log('Attempting login with:', { email, password })
-      
       const response = await api.post(endpoints.login, { email, password })
-      
-      console.log('Login response:', response)
       
       if (response.success) {
         const { user, token } = response.data
