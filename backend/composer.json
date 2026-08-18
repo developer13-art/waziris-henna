@@ -1,0 +1,48 @@
+{
+    "name": "waziris-henna/backend",
+    "description": "Waziri's Henna Smart Business Management System - PHP REST API",
+    "type": "project",
+    "version": "1.0.0",
+    "require": {
+        "php": ">=8.0",
+        "vlucas/phpdotenv": "^5.5",
+        "firebase/php-jwt": "^6.11"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Controllers\\": "src/Controllers/",
+            "Models\\": "src/Models/",
+            "Middleware\\": "src/Middleware/",
+            "Services\\": "src/Services/",
+            "Helpers\\": "src/Helpers/",
+            "Config\\": "src/Config/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "start": "php -S localhost:8000 -t public",
+        "test": "phpunit",
+        "post-install-cmd": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "preferred-install": "dist",
+        "policy": {
+            "advisories": {
+                "block": false
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -1,0 +1,59 @@
+/* Customer-specific styles */
+
+/* Hero section */
+.hero-gradient {
+    background: linear-gradient(135deg, #FFF8F0 0%, #FFF1E6 50%, #FFF8F0 100%);
+}
+
+/* Card hover effects */
+.hover-lift {
+    transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 45px rgba(139, 94, 60, 0.15);
+}
+
+/* Design card overlay */
+.design-overlay {
+    background: linear-gradient(to top, rgba(139, 94, 60, 0.85), rgba(139, 94, 60, 0.15));
+}
+
+/* WhatsApp float animation */
+@keyframes whatsappPulse {
+    0%, 100% { box-shadow: 0 5px 25px rgba(37, 211, 102, 0.3); }
+    50% { box-shadow: 0 5px 40px rgba(37, 211, 102, 0.5); }
+}
+
+.whatsapp-float-animation {
+    animation: whatsappPulse 3s infinite;
+}
+
+/* Price tag */
+.price-tag {
+    display: inline-block;
+    margin-top: 15px;
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.9rem;
+    background: rgba(139, 94, 60, 0.08);
+    padding: 5px 14px;
+    border-radius: 50px;
+}
+
+/* Step cards */
+.step-number {
+    width: 50px;
+    height: 50px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin: 0 auto 20px;
+    font-family: 'Playfair Display', serif;
+}
