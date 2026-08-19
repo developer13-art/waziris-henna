@@ -117,14 +117,10 @@ class PaymentController
             Response::error('Invalid input data');
         }
 
-        $paymentType = $input['payment_type'] ?? null; // 'booking' or 'order'
+        $paymentType = $input['payment_type'] ?? 'order'; // 'booking' or 'order'
         $email = $input['email'] ?? null;
         $amount = (float)($input['amount'] ?? 0);
         $callbackUrl = $input['callback_url'] ?? null;
-
-        if (!$paymentType || !in_array($paymentType, ['booking', 'order'])) {
-            Response::error('Invalid payment type');
-        }
 
         if (!$email) {
             Response::error('Email is required for payment');
@@ -150,7 +146,8 @@ class PaymentController
         $paymentId = $this->db->insert('payments', $paymentData);
 
         // Initialize Paystack transaction
-        $result = $this->paystack->initializeTransaction([
+        $paystack = new PaystackService();
+        $result = $paystack->initializeTransaction([
             'email' => $email,
             'amount' => $amount * 100, // Convert to kobo
             'reference' => $paymentReference,

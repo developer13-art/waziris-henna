@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import api, { endpoints } from '../../services/api'
-import Loader from '../../components/common/Loader'
 import { useFavorites } from '../../context/FavoritesContext'
+import { getImageUrl } from '../../utils/imageUrl'
 import { toast } from 'react-toastify'
 
 function DesignsPage() {
@@ -26,17 +25,21 @@ function DesignsPage() {
   const fetchDesigns = useCallback(async () => {
     setIsLoading(true)
     try {
-      const params = { page, per_page: 12, ...filters }
-      Object.keys(params).forEach(key => {
-        if (!params[key]) delete params[key]
-      })
+      const params = { page, per_page: 12 }
+      if (filters.search) params.search = filters.search
+      if (filters.category) params.category = filters.category
+      if (filters.style) params.style = filters.style
+      if (filters.occasion) params.occasion = filters.occasion
+      if (filters.body_area) params.body_area = filters.body_area
+      if (filters.complexity) params.complexity = filters.complexity
 
       const response = await api.get(endpoints.designs, { params })
-      setDesigns(response.data || [])
+      setDesigns(Array.isArray(response.data) ? response.data : [])
       setTotalPages(response.pagination?.total_pages || 1)
     } catch (error) {
       console.error('Error fetching designs:', error)
       toast.error('Failed to load designs')
+      setDesigns([])
     } finally {
       setIsLoading(false)
     }
@@ -45,7 +48,7 @@ function DesignsPage() {
   const fetchCategories = async () => {
     try {
       const response = await api.get(endpoints.categories)
-      setCategories(response.data || [])
+      setCategories(Array.isArray(response.data) ? response.data : [])
     } catch (error) {
       console.error('Error fetching categories:', error)
     }
@@ -65,189 +68,236 @@ function DesignsPage() {
   }
 
   const clearFilters = () => {
-    setFilters({
-      search: '',
-      category: '',
-      style: '',
-      occasion: '',
-      body_area: '',
-      complexity: '',
-    })
+    setFilters({ search: '', category: '', style: '', occasion: '', body_area: '', complexity: '' })
     setPage(1)
   }
 
   const styles = ['Traditional Hausa', 'Arabic', 'Floral', 'Minimalist', 'Geometric']
   const occasions = ['Wedding', 'Eid', 'Birthday', 'Casual', 'Naming Ceremony', 'Engagement']
-  const bodyAreas = ['Hands', 'Feet', 'Both']
-  const complexityLevels = ['Simple', 'Medium', 'Intricate']
 
   return (
     <>
       <Helmet>
         <title>Henna Designs Gallery | Waziri's Henna</title>
-        <meta name="description" content="Browse our beautiful collection of henna designs for weddings, Eid, and all occasions." />
       </Helmet>
 
-      {/* Page Header */}
-      <section className="pt-32 pb-12 bg-gradient-to-br from-[#FFF8F0] to-[#FFF1E6]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="section-tag">Portfolio</span>
-          <h1 className="font-playfair text-4xl lg:text-5xl font-bold text-[#222] mt-4">
+      <div style={{ fontFamily: 'Poppins, sans-serif', paddingTop: '80px' }}>
+        {/* Page Header */}
+        <div style={{
+          padding: '60px 20px 40px',
+          textAlign: 'center',
+          background: 'linear-gradient(135deg, #FFF8F0 0%, #FFF1E6 100%)'
+        }}>
+          <span style={{
+            display: 'inline-block',
+            padding: '5px 16px',
+            background: 'rgba(212, 175, 55, 0.08)',
+            color: '#D4AF37',
+            fontSize: '12px',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            borderRadius: '50px',
+            marginBottom: '10px'
+          }}>
+            Portfolio
+          </span>
+          <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: '40px', fontWeight: '700', color: '#222', marginBottom: '10px' }}>
             Our Beautiful Designs
           </h1>
-          <p className="text-gray-600 mt-4 max-w-lg mx-auto">
+          <p style={{ color: '#666', maxWidth: '500px', margin: '0 auto' }}>
             Browse our collection and find the perfect design for your occasion
           </p>
         </div>
-      </section>
 
-      {/* Filters Section */}
-      <section className="py-8 bg-white border-y border-[#e8ddd4] sticky top-16 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
-            <div className="flex-1 min-w-[200px]">
-              <input
-                type="text"
-                placeholder="Search designs..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="w-full px-4 py-2.5 border-2 border-[#e8ddd4] rounded-full focus:outline-none focus:border-[#D4AF37] text-sm"
-              />
-            </div>
-
-            {/* Category Filter */}
+        {/* Filters */}
+        <div style={{ padding: '16px 20px', background: '#fff', borderBottom: '1px solid #e8ddd4', position: 'sticky', top: '80px', zIndex: 10 }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            <input
+              type="text"
+              placeholder="Search designs..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              style={{
+                flex: 1,
+                minWidth: '180px',
+                padding: '10px 16px',
+                border: '2px solid #e8ddd4',
+                borderRadius: '50px',
+                fontSize: '13px',
+                outline: 'none',
+                fontFamily: 'Poppins, sans-serif'
+              }}
+            />
             <select
               value={filters.category}
               onChange={(e) => handleFilterChange('category', e.target.value)}
-              className="px-4 py-2.5 border-2 border-[#e8ddd4] rounded-full focus:outline-none focus:border-[#D4AF37] text-sm bg-white"
+              style={{ padding: '10px 16px', border: '2px solid #e8ddd4', borderRadius: '50px', fontSize: '13px', background: '#fff', fontFamily: 'Poppins, sans-serif' }}
             >
               <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
+              {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
             </select>
-
-            {/* Style Filter */}
             <select
               value={filters.style}
               onChange={(e) => handleFilterChange('style', e.target.value)}
-              className="px-4 py-2.5 border-2 border-[#e8ddd4] rounded-full focus:outline-none focus:border-[#D4AF37] text-sm bg-white"
+              style={{ padding: '10px 16px', border: '2px solid #e8ddd4', borderRadius: '50px', fontSize: '13px', background: '#fff', fontFamily: 'Poppins, sans-serif' }}
             >
               <option value="">All Styles</option>
-              {styles.map(style => (
-                <option key={style} value={style}>{style}</option>
-              ))}
+              {styles.map(style => <option key={style} value={style}>{style}</option>)}
             </select>
-
-            {/* Occasion Filter */}
             <select
               value={filters.occasion}
               onChange={(e) => handleFilterChange('occasion', e.target.value)}
-              className="px-4 py-2.5 border-2 border-[#e8ddd4] rounded-full focus:outline-none focus:border-[#D4AF37] text-sm bg-white"
+              style={{ padding: '10px 16px', border: '2px solid #e8ddd4', borderRadius: '50px', fontSize: '13px', background: '#fff', fontFamily: 'Poppins, sans-serif' }}
             >
               <option value="">All Occasions</option>
-              {occasions.map(occasion => (
-                <option key={occasion} value={occasion}>{occasion}</option>
-              ))}
+              {occasions.map(occasion => <option key={occasion} value={occasion}>{occasion}</option>)}
             </select>
-
-            {/* Clear Filters */}
             {(filters.search || filters.category || filters.style || filters.occasion) && (
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2.5 text-[#8B5E3C] font-semibold hover:text-red-500 transition-colors text-sm"
-              >
+              <button onClick={clearFilters} style={{
+                padding: '10px 16px',
+                background: 'none',
+                border: 'none',
+                color: '#8B5E3C',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontFamily: 'Poppins, sans-serif'
+              }}>
                 <i className="fas fa-times mr-1"></i> Clear
               </button>
             )}
           </div>
         </div>
-      </section>
 
-      {/* Designs Grid */}
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Designs Grid */}
+        <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
           {isLoading ? (
-            <Loader />
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <i className="fas fa-spinner fa-spin" style={{ fontSize: '32px', color: '#D4AF37' }}></i>
+            </div>
           ) : designs.length === 0 ? (
-            <div className="text-center py-20">
-              <i className="fas fa-search text-6xl text-gray-300 mb-6"></i>
-              <h3 className="font-playfair text-2xl font-semibold text-gray-600 mb-2">
-                No Designs Found
-              </h3>
-              <p className="text-gray-500 mb-6">Try adjusting your filters or search terms</p>
-              <button
-                onClick={clearFilters}
-                className="px-6 py-3 bg-[#D4AF37] text-white font-semibold rounded-full hover:bg-[#b8941f] transition-colors"
-              >
-                Clear Filters
-              </button>
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <i className="fas fa-images" style={{ fontSize: '48px', color: '#ddd', marginBottom: '16px' }}></i>
+              <p style={{ color: '#666', fontSize: '18px' }}>No designs found</p>
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {designs.map((design, index) => (
-                <motion.div
-                  key={design.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
-                >
-                  <Link to={`/designs/${design.slug}`}>
-                    <img
-                      src={design.image_url}
-                      alt={design.title}
-                      className="w-full h-72 object-cover group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                      <h3 className="text-white font-playfair font-semibold">{design.title}</h3>
-                      <p className="text-gray-300 text-sm">{design.style} • {design.occasion}</p>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              gap: '20px'
+            }}>
+              {designs.map((design) => (
+                <div key={design.id} style={{
+                  background: '#fff',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+                  position: 'relative',
+                  transition: 'transform 0.2s, box-shadow 0.2s'
+                }}>
+                  <Link to={`/designs/${design.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    {design.image_url ? (
+                      <img
+                        src={getImageUrl(design.image_url)}
+                        alt={design.title}
+                        style={{
+                          width: '100%',
+                          height: '250px',
+                          objectFit: 'cover',
+                          display: 'block'
+                        }}
+                        onError={(e) => {
+                          e.target.onerror = null
+                          e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        height: '250px',
+                        background: '#f9fafb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <i className="fas fa-image" style={{ fontSize: '40px', color: '#ddd' }}></i>
+                      </div>
+                    )}
+                    <div style={{ padding: '16px' }}>
+                      <h3 style={{ fontWeight: '600', fontSize: '16px', marginBottom: '4px' }}>{design.title}</h3>
+                      <p style={{ fontSize: '13px', color: '#666' }}>
+                        {design.style || 'Style'} • {design.occasion || 'Any Occasion'}
+                      </p>
                     </div>
                   </Link>
+                  {/* Favorite Button */}
                   <button
                     onClick={() => toggleFavorite(design)}
-                    className="absolute top-3 right-3 w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl shadow-md hover:scale-110 transition-transform z-10"
-                    aria-label="Save design to favorites"
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      width: '36px',
+                      height: '36px',
+                      background: '#fff',
+                      borderRadius: '50%',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
                   >
                     <i className={`${isFavorite(design.id) ? 'fas text-red-500' : 'far text-gray-500'} fa-heart`}></i>
                   </button>
-                  {design.complexity && (
-                    <span className="absolute top-3 left-3 px-3 py-1 bg-[#D4AF37] text-[#222] text-xs font-semibold rounded-full">
-                      {design.complexity}
-                    </span>
-                  )}
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-3 mt-12">
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '40px' }}>
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="w-10 h-10 bg-white border-2 border-[#e8ddd4] rounded-full flex items-center justify-center text-[#8B5E3C] hover:border-[#D4AF37] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#fff',
+                  border: '2px solid #e8ddd4',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  opacity: page === 1 ? 0.5 : 1
+                }}
               >
                 <i className="fas fa-chevron-left"></i>
               </button>
-              <span className="text-sm font-semibold text-gray-600">
+              <span style={{ padding: '10px', fontWeight: '600', color: '#666' }}>
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="w-10 h-10 bg-white border-2 border-[#e8ddd4] rounded-full flex items-center justify-center text-[#8B5E3C] hover:border-[#D4AF37] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#fff',
+                  border: '2px solid #e8ddd4',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  opacity: page === totalPages ? 0.5 : 1
+                }}
               >
                 <i className="fas fa-chevron-right"></i>
               </button>
             </div>
           )}
         </div>
-      </section>
+      </div>
     </>
   )
 }

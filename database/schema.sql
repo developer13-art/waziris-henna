@@ -1,5 +1,5 @@
 -- ============================================
--- HENNA BY WAZIRI - DATABASE SCHEMA
+-- WAZIRI'S HENNA - DATABASE SCHEMA
 -- All data will be added dynamically via Admin Dashboard
 -- ============================================
 

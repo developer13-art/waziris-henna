@@ -151,6 +151,7 @@ class BookingController
         $customerPhone = trim($input['customer_phone'] ?? '');
         $eventDate = $input['event_date'] ?? null;
         $serviceId = $input['service_id'] ?? null;
+        $designId = $input['design_id'] ?? null;
 
         if (empty($customerName)) {
             Response::error('Customer name is required');
@@ -160,6 +161,30 @@ class BookingController
         }
         if (empty($eventDate)) {
             Response::error('Event date is required');
+        }
+
+        // Handle empty string values - convert to NULL
+        $serviceId = !empty($serviceId) ? (int)$serviceId : null;
+        $designId = !empty($designId) ? (int)$designId : null;
+        $customerEmail = !empty($input['customer_email']) ? $input['customer_email'] : null;
+        $eventTime = !empty($input['event_time']) ? $input['event_time'] : null;
+        $additionalNotes = !empty($input['additional_notes']) ? $input['additional_notes'] : null;
+        $userId = !empty($input['user_id']) ? (int)$input['user_id'] : null;
+
+        // Validate service_id exists
+        if ($serviceId) {
+            $service = $this->db->queryOne("SELECT id FROM services WHERE id = ?", [$serviceId]);
+            if (!$service) {
+                Response::error('Invalid service selected');
+            }
+        }
+
+        // Validate design_id exists if provided
+        if ($designId) {
+            $design = $this->db->queryOne("SELECT id FROM designs WHERE id = ?", [$designId]);
+            if (!$design) {
+                Response::error('Invalid design selected');
+            }
         }
 
         // Check if date is available
@@ -176,20 +201,20 @@ class BookingController
 
         $data = [
             'booking_reference' => $bookingReference,
-            'user_id' => $input['user_id'] ?? null,
+            'user_id' => $userId,
             'customer_name' => $customerName,
-            'customer_email' => $input['customer_email'] ?? null,
+            'customer_email' => $customerEmail,
             'customer_phone' => $customerPhone,
             'service_id' => $serviceId,
-            'design_id' => $input['design_id'] ?? null,
+            'design_id' => $designId,
             'event_type' => $input['event_type'] ?? 'Other',
             'event_date' => $eventDate,
-            'event_time' => $input['event_time'] ?? null,
-            'number_of_people' => $input['number_of_people'] ?? 1,
-            'additional_notes' => $input['additional_notes'] ?? null,
+            'event_time' => $eventTime,
+            'number_of_people' => (int)($input['number_of_people'] ?? 1),
+            'additional_notes' => $additionalNotes,
             'booking_status' => 'Pending',
             'payment_status' => 'Pending',
-            'total_amount' => $input['total_amount'] ?? 0,
+            'total_amount' => (float)($input['total_amount'] ?? 0),
         ];
 
         $id = $this->db->insert('bookings', $data);

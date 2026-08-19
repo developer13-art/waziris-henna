@@ -52,12 +52,30 @@ function BookingPage() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
-      const response = await api.post(endpoints.bookings, formData)
+      // Clean up the form data - convert empty strings to null
+      const bookingData = {
+        ...formData,
+        service_id: formData.service_id ? parseInt(formData.service_id) : null,
+        design_id: formData.design_id ? parseInt(formData.design_id) : null,
+        number_of_people: parseInt(formData.number_of_people) || 1,
+        total_amount: 0,
+      }
+
+      // Remove empty fields
+      Object.keys(bookingData).forEach(key => {
+        if (bookingData[key] === '' || bookingData[key] === null || bookingData[key] === undefined) {
+          if (key !== 'service_id' && key !== 'design_id' && key !== 'customer_email' && key !== 'event_time' && key !== 'additional_notes') {
+            delete bookingData[key]
+          }
+        }
+      })
+
+      const response = await api.post(endpoints.bookings, bookingData)
 
       if (response.success) {
         toast.success('Booking created successfully!')
@@ -70,7 +88,6 @@ function BookingPage() {
       setIsSubmitting(false)
     }
   }
-
   if (isLoading) return <Loader />
 
   const today = new Date().toISOString().split('T')[0]

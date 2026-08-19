@@ -153,6 +153,9 @@ try {
         case 'customers':
             $controllerClass = 'Controllers\\CustomerController';
             break;
+        case 'upload':
+            $controllerClass = 'Controllers\\UploadController';
+            break;
             
         default:
             Response::error('Endpoint not found', 404);

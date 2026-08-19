@@ -154,78 +154,114 @@ class DesignController
     private function createDesign(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        
+
         if (!$input) {
             Response::error('Invalid input data');
         }
-        
+
         $title = trim($input['title'] ?? '');
         if (empty($title)) {
             Response::error('Design title is required');
         }
-        
-        $slug = $input['slug'] ?? ReferenceGenerator::slugify($title);
-        
-        // Check if slug exists
-        $existing = $this->db->queryOne("SELECT id FROM designs WHERE slug = ?", [$slug]);
-        if ($existing) {
-            Response::error('Slug already exists');
+
+        // Generate unique slug
+        $baseSlug = ReferenceGenerator::slugify($title);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        // Check if slug exists, if so add a number
+        while ($this->db->queryOne("SELECT id FROM designs WHERE slug = ?", [$slug])) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
         }
-        
+
+        // Handle category_id
+        $categoryId = !empty($input['category_id']) ? (int)$input['category_id'] : null;
+
+        if ($categoryId) {
+            $category = $this->db->queryOne("SELECT id FROM design_categories WHERE id = ?", [$categoryId]);
+            if (!$category) {
+                Response::error('Invalid category selected');
+            }
+        }
+
         $data = [
             'title' => $title,
             'slug' => $slug,
-            'description' => $input['description'] ?? '',
-            'category_id' => $input['category_id'] ?? null,
-            'style' => $input['style'] ?? null,
-            'occasion' => $input['occasion'] ?? null,
-            'body_area' => $input['body_area'] ?? null,
+            'description' => !empty($input['description']) ? $input['description'] : null,
+            'category_id' => $categoryId,
+            'style' => !empty($input['style']) ? $input['style'] : null,
+            'occasion' => !empty($input['occasion']) ? $input['occasion'] : null,
+            'body_area' => !empty($input['body_area']) ? $input['body_area'] : null,
             'complexity' => $input['complexity'] ?? 'Medium',
-            'price' => $input['price'] ?? null,
-            'image_url' => $input['image_url'] ?? null,
-            'additional_images' => $input['additional_images'] ?? null,
+            'price' => !empty($input['price']) ? (float)$input['price'] : null,
+            'image_url' => !empty($input['image_url']) ? $input['image_url'] : null,
+            'additional_images' => !empty($input['additional_images']) ? $input['additional_images'] : null,
             'is_featured' => $input['is_featured'] ?? false,
             'is_design_of_week' => $input['is_design_of_week'] ?? false,
             'is_active' => $input['is_active'] ?? true,
         ];
-        
+
         $id = $this->db->insert('designs', $data);
-        
-        Response::success(['id' => $id], 'Design created successfully', 201);
+
+        Response::success(['id' => $id, 'slug' => $slug], 'Design created successfully', 201);
     }
 
     private function updateDesign(int $id): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        
+
         if (!$input) {
             Response::error('Invalid input data');
         }
-        
+
         $existing = $this->db->queryOne("SELECT * FROM designs WHERE id = ?", [$id]);
         if (!$existing) {
             Response::error('Design not found', 404);
         }
-        
+
         $data = [];
+
+        // Handle category_id separately
+        if (isset($input['category_id'])) {
+            $categoryId = !empty($input['category_id']) ? (int)$input['category_id'] : null;
+            
+            if ($categoryId) {
+                $category = $this->db->queryOne("SELECT id FROM design_categories WHERE id = ?", [$categoryId]);
+                if (!$category) {
+                    Response::error('Invalid category selected');
+                }
+            }
+            
+            $data['category_id'] = $categoryId;
+        }
+
+        // Handle other fields
         $allowedFields = [
-            'title', 'description', 'category_id', 'style', 'occasion',
+            'title', 'description', 'style', 'occasion',
             'body_area', 'complexity', 'price', 'image_url',
             'additional_images', 'is_featured', 'is_design_of_week', 'is_active'
         ];
-        
+
         foreach ($allowedFields as $field) {
             if (isset($input[$field])) {
-                $data[$field] = $input[$field];
+                // Convert empty strings to null for nullable fields
+                if (in_array($field, ['description', 'style', 'occasion', 'body_area', 'image_url', 'additional_images'])) {
+                    $data[$field] = !empty($input[$field]) ? $input[$field] : null;
+                } elseif ($field === 'price') {
+                    $data[$field] = !empty($input[$field]) ? (float)$input[$field] : null;
+                } else {
+                    $data[$field] = $input[$field];
+                }
             }
         }
-        
+
         if (empty($data)) {
             Response::error('No data to update');
         }
-        
+
         $this->db->update('designs', $data, $id);
-        
+
         Response::success([], 'Design updated successfully');
     }
 

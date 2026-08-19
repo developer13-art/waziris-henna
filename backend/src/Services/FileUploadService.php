@@ -8,11 +8,12 @@ class FileUploadService
         'image/jpeg' => 'jpg',
         'image/png' => 'png',
         'image/webp' => 'webp',
+        'image/gif' => 'gif',
     ];
     
     private int $maxFileSize = 5242880; // 5MB
 
-    public function upload(array $file, string $directory): array
+    public function upload(array $file, string $directory = 'designs'): array
     {
         if (!isset($file['tmp_name']) || empty($file['tmp_name'])) {
             return ['success' => false, 'message' => 'No file uploaded'];
@@ -22,10 +23,12 @@ class FileUploadService
             return ['success' => false, 'message' => 'File size exceeds 5MB limit'];
         }
 
-        $mimeType = mime_content_type($file['tmp_name']);
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
         
         if (!isset($this->allowedTypes[$mimeType])) {
-            return ['success' => false, 'message' => 'Invalid file type. Only JPG, PNG, and WebP are allowed'];
+            return ['success' => false, 'message' => 'Invalid file type. Only JPG, PNG, WebP, and GIF are allowed'];
         }
 
         $extension = $this->allowedTypes[$mimeType];
@@ -43,6 +46,7 @@ class FileUploadService
             return [
                 'success' => true,
                 'url' => '/uploads/' . $directory . '/' . $filename,
+                'filename' => $filename,
             ];
         }
 

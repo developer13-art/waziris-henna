@@ -38,6 +38,7 @@ function CheckoutPage() {
     setIsProcessing(true)
 
     try {
+      // Step 1: Create the order
       const orderData = {
         ...formData,
         items: items.map(item => ({
@@ -47,17 +48,51 @@ function CheckoutPage() {
         delivery_fee: deliveryFee,
       }
 
-      const response = await api.post(endpoints.orders, orderData)
+      console.log('Creating order...', orderData)
 
-      if (response.success) {
-        toast.success('Order placed successfully!')
-        clearCart()
-        navigate(`/payment/success/${response.data.order_reference}`)
+      const orderResponse = await api.post(endpoints.orders, orderData)
+
+      if (!orderResponse.success) {
+        throw new Error(orderResponse.message || 'Failed to create order')
       }
+
+      const orderId = orderResponse.data.id
+      const orderReference = orderResponse.data.order_reference
+
+      console.log('Order created:', { orderId, orderReference })
+
+      // Step 2: Initialize Paystack payment
+      const paymentData = {
+        payment_type: 'order',
+        email: formData.customer_email,
+        amount: total,
+        callback_url: `${window.location.origin}/payment/success/${orderReference}`,
+      }
+
+      console.log('Initializing payment...', paymentData)
+
+      const paymentResponse = await api.post(endpoints.initializePayment(orderId), paymentData)
+
+      if (!paymentResponse.success) {
+        throw new Error(paymentResponse.message || 'Failed to initialize payment')
+      }
+
+      const authorizationUrl = paymentResponse.data.authorization_url
+
+      console.log('Payment initialized:', authorizationUrl)
+
+      // Step 3: Redirect to Paystack payment page
+      toast.success('Redirecting to payment...')
+      
+      // Clear cart before redirect
+      clearCart()
+      
+      // Redirect to Paystack
+      window.location.href = authorizationUrl
+
     } catch (error) {
-      console.error('Error placing order:', error)
-      toast.error(error.response?.data?.message || 'Failed to place order')
-    } finally {
+      console.error('Checkout error:', error)
+      toast.error(error.response?.data?.message || error.message || 'Failed to process checkout')
       setIsProcessing(false)
     }
   }
@@ -68,175 +103,209 @@ function CheckoutPage() {
         <title>Checkout | Waziri's Henna</title>
       </Helmet>
 
-      <section className="pt-32 pb-12 bg-gradient-to-br from-[#FFF8F0] to-[#FFF1E6]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="section-tag">Checkout</span>
-          <h1 className="font-playfair text-4xl lg:text-5xl font-bold text-[#222] mt-4">
-            Complete Your Order
-          </h1>
-        </div>
-      </section>
+      <section style={{ padding: '120px 20px 60px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Poppins, sans-serif' }}>
+        <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: '700', textAlign: 'center', marginBottom: '40px' }}>
+          Complete Your Order
+        </h1>
 
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Checkout Form */}
-            <div className="lg:col-span-2">
-              <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-lg p-8 space-y-6">
-                <h3 className="font-playfair text-xl font-semibold mb-4">Customer Information</h3>
-                
-                <div>
-                  <label className="block font-semibold text-sm mb-2">Full Name *</label>
-                  <input
-                    type="text"
-                    name="customer_name"
-                    value={formData.customer_name}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter your full name"
-                    className="w-full px-4 py-3 border-2 border-[#e8ddd4] rounded-xl focus:outline-none focus:border-[#D4AF37] transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-sm mb-2">Email Address *</label>
-                  <input
-                    type="email"
-                    name="customer_email"
-                    value={formData.customer_email}
-                    onChange={handleChange}
-                    required
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-3 border-2 border-[#e8ddd4] rounded-xl focus:outline-none focus:border-[#D4AF37] transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-sm mb-2">Phone Number *</label>
-                  <input
-                    type="tel"
-                    name="customer_phone"
-                    value={formData.customer_phone}
-                    onChange={handleChange}
-                    required
-                    placeholder="+234 XXX XXX XXXX"
-                    className="w-full px-4 py-3 border-2 border-[#e8ddd4] rounded-xl focus:outline-none focus:border-[#D4AF37] transition-colors"
-                  />
-                </div>
-
-                <h3 className="font-playfair text-xl font-semibold mb-4 pt-4">Delivery Method</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, delivery_method: 'Pickup' }))}
-                    className={`p-4 rounded-2xl border-2 text-center transition-all ${
-                      formData.delivery_method === 'Pickup'
-                        ? 'border-[#D4AF37] bg-[#D4AF37]/5'
-                        : 'border-[#e8ddd4] hover:border-[#D4AF37]'
-                    }`}
-                  >
-                    <i className="fas fa-store text-2xl mb-2 text-[#8B5E3C]"></i>
-                    <p className="font-semibold">Pickup</p>
-                    <p className="text-sm text-gray-500">Free</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, delivery_method: 'Delivery' }))}
-                    className={`p-4 rounded-2xl border-2 text-center transition-all ${
-                      formData.delivery_method === 'Delivery'
-                        ? 'border-[#D4AF37] bg-[#D4AF37]/5'
-                        : 'border-[#e8ddd4] hover:border-[#D4AF37]'
-                    }`}
-                  >
-                    <i className="fas fa-truck text-2xl mb-2 text-[#8B5E3C]"></i>
-                    <p className="font-semibold">Delivery</p>
-                    <p className="text-sm text-gray-500">₦1,500</p>
-                  </button>
-                </div>
-
-                {formData.delivery_method === 'Delivery' && (
-                  <div>
-                    <label className="block font-semibold text-sm mb-2">Delivery Address *</label>
-                    <textarea
-                      name="delivery_address"
-                      value={formData.delivery_address}
-                      onChange={handleChange}
-                      required
-                      rows="3"
-                      placeholder="Enter your delivery address"
-                      className="w-full px-4 py-3 border-2 border-[#e8ddd4] rounded-xl focus:outline-none focus:border-[#D4AF37] transition-colors resize-none"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block font-semibold text-sm mb-2">Additional Notes</label>
-                  <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    rows="3"
-                    placeholder="Any special instructions..."
-                    className="w-full px-4 py-3 border-2 border-[#e8ddd4] rounded-xl focus:outline-none focus:border-[#D4AF37] transition-colors resize-none"
-                  />
-                </div>
-              </form>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px' }}>
+          {/* Checkout Form */}
+          <form onSubmit={handleSubmit} style={{ background: '#fff', borderRadius: '20px', padding: '30px', boxShadow: '0 5px 20px rgba(0,0,0,0.08)' }}>
+            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', marginBottom: '20px' }}>Customer Information</h3>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontWeight: '600', fontSize: '14px', marginBottom: '6px' }}>Full Name *</label>
+              <input
+                type="text"
+                name="customer_name"
+                value={formData.customer_name}
+                onChange={handleChange}
+                required
+                placeholder="Enter your full name"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  border: '2px solid #e8ddd4',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontFamily: 'Poppins, sans-serif',
+                  outline: 'none'
+                }}
+              />
             </div>
 
-            {/* Order Summary */}
-            <div className="bg-white rounded-2xl p-6 shadow-md h-fit">
-              <h3 className="font-playfair text-xl font-semibold mb-6">Order Summary</h3>
-              <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
-                {items.map((item) => (
-                  <div key={item.product_id} className="flex items-center gap-3">
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      className="w-14 h-14 rounded-lg object-cover"
-                    />
-                    <div className="flex-1">
-                      <p className="font-semibold text-sm">{item.name}</p>
-                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                    </div>
-                    <span className="font-semibold text-sm">
-                      ₦{(item.price * item.quantity).toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">₦{subtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Delivery</span>
-                  <span className="font-semibold">
-                    {deliveryFee === 0 ? 'FREE' : `₦${deliveryFee.toLocaleString()}`}
-                  </span>
-                </div>
-                <div className="border-t pt-3 flex justify-between">
-                  <span className="font-bold">Total</span>
-                  <span className="font-bold text-[#8B5E3C]">₦{total.toLocaleString()}</span>
-                </div>
-              </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontWeight: '600', fontSize: '14px', marginBottom: '6px' }}>Email Address *</label>
+              <input
+                type="email"
+                name="customer_email"
+                value={formData.customer_email}
+                onChange={handleChange}
+                required
+                placeholder="your@email.com"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  border: '2px solid #e8ddd4',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontFamily: 'Poppins, sans-serif',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontWeight: '600', fontSize: '14px', marginBottom: '6px' }}>Phone Number *</label>
+              <input
+                type="tel"
+                name="customer_phone"
+                value={formData.customer_phone}
+                onChange={handleChange}
+                required
+                placeholder="+234 XXX XXX XXXX"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  border: '2px solid #e8ddd4',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontFamily: 'Poppins, sans-serif',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', marginBottom: '20px', marginTop: '30px' }}>Delivery Method</h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <button
-                onClick={handleSubmit}
-                disabled={isProcessing || items.length === 0}
-                className="w-full py-4 bg-[#D4AF37] text-white font-bold rounded-full hover:bg-[#b8941f] transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, delivery_method: 'Pickup' }))}
+                style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: formData.delivery_method === 'Pickup' ? '2px solid #D4AF37' : '2px solid #e8ddd4',
+                  background: formData.delivery_method === 'Pickup' ? 'rgba(212, 175, 55, 0.05)' : '#fff',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
               >
-                {isProcessing ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i> Processing...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-lock mr-2"></i> Place Order
-                  </>
-                )}
+                <i className="fas fa-store" style={{ fontSize: '24px', color: '#8B5E3C', marginBottom: '8px', display: 'block' }}></i>
+                <span style={{ fontWeight: '600', display: 'block' }}>Pickup</span>
+                <span style={{ fontSize: '12px', color: '#666' }}>Free</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, delivery_method: 'Delivery' }))}
+                style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: formData.delivery_method === 'Delivery' ? '2px solid #D4AF37' : '2px solid #e8ddd4',
+                  background: formData.delivery_method === 'Delivery' ? 'rgba(212, 175, 55, 0.05)' : '#fff',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                <i className="fas fa-truck" style={{ fontSize: '24px', color: '#8B5E3C', marginBottom: '8px', display: 'block' }}></i>
+                <span style={{ fontWeight: '600', display: 'block' }}>Delivery</span>
+                <span style={{ fontSize: '12px', color: '#666' }}>₦1,500</span>
               </button>
             </div>
+
+            {formData.delivery_method === 'Delivery' && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontWeight: '600', fontSize: '14px', marginBottom: '6px' }}>Delivery Address *</label>
+                <textarea
+                  name="delivery_address"
+                  value={formData.delivery_address}
+                  onChange={handleChange}
+                  required
+                  rows="3"
+                  placeholder="Enter your delivery address"
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    border: '2px solid #e8ddd4',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    fontFamily: 'Poppins, sans-serif',
+                    outline: 'none',
+                    resize: 'none'
+                  }}
+                />
+              </div>
+            )}
+          </form>
+
+          {/* Order Summary */}
+          <div style={{ background: '#fff', borderRadius: '20px', padding: '30px', boxShadow: '0 5px 20px rgba(0,0,0,0.08)', height: 'fit-content' }}>
+            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', marginBottom: '20px' }}>Order Summary</h3>
+            
+            <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
+              {items.map((item) => (
+                <div key={item.product_id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid #f0e8dd' }}>
+                  <img src={item.image_url} alt={item.name} style={{ width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover' }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: '600', fontSize: '14px' }}>{item.name}</p>
+                    <p style={{ fontSize: '12px', color: '#666' }}>Qty: {item.quantity}</p>
+                  </div>
+                  <span style={{ fontWeight: '600', fontSize: '14px' }}>
+                    ₦{(item.price * item.quantity).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ padding: '16px 0', borderTop: '2px solid #e8ddd4' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: '#666' }}>Subtotal</span>
+                <span style={{ fontWeight: '600' }}>₦{subtotal.toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: '#666' }}>Delivery Fee</span>
+                <span style={{ fontWeight: '600' }}>
+                  {deliveryFee === 0 ? 'FREE' : `₦${deliveryFee.toLocaleString()}`}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #e8ddd4' }}>
+                <span style={{ fontWeight: '700' }}>Total</span>
+                <span style={{ fontWeight: '700', color: '#8B5E3C', fontSize: '18px' }}>
+                  ₦{total.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSubmit}
+              disabled={isProcessing || items.length === 0}
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: '#D4AF37',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '50px',
+                fontSize: '16px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                marginTop: '20px',
+                opacity: isProcessing ? 0.7 : 1,
+                fontFamily: 'Poppins, sans-serif'
+              }}
+            >
+              {isProcessing ? (
+                <>
+                  <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-lock" style={{ marginRight: '8px' }}></i>
+                  Pay with Paystack
+                </>
+              )}
+            </button>
           </div>
         </div>
       </section>

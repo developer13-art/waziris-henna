@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import api, { endpoints } from '../../services/api'
-import Loader from '../../components/common/Loader'
 import { useCart } from '../../context/CartContext'
+import { getImageUrl } from '../../utils/imageUrl'
 import { toast } from 'react-toastify'
 
 function ProductsPage() {
@@ -12,26 +11,23 @@ function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [filters, setFilters] = useState({
-    search: '',
-    category: '',
-  })
+  const [filters, setFilters] = useState({ search: '', category: '' })
   const { addToCart } = useCart()
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true)
     try {
-      const params = { page, per_page: 12, ...filters }
-      Object.keys(params).forEach(key => {
-        if (!params[key]) delete params[key]
-      })
+      const params = { page, per_page: 12 }
+      if (filters.search) params.search = filters.search
+      if (filters.category) params.category = filters.category
 
       const response = await api.get(endpoints.products, { params })
-      setProducts(response.data || [])
+      setProducts(Array.isArray(response.data) ? response.data : [])
       setTotalPages(response.pagination?.total_pages || 1)
     } catch (error) {
       console.error('Error fetching products:', error)
       toast.error('Failed to load products')
+      setProducts([])
     } finally {
       setIsLoading(false)
     }
@@ -47,143 +43,155 @@ function ProductsPage() {
     <>
       <Helmet>
         <title>Premium Henna Products | Waziri's Henna</title>
-        <meta name="description" content="Shop premium quality henna products including powder, oils, stickers, and patterns." />
       </Helmet>
 
-      {/* Page Header */}
-      <section className="pt-32 pb-12 bg-gradient-to-br from-[#FFF8F0] to-[#FFF1E6]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="section-tag">Shop</span>
-          <h1 className="font-playfair text-4xl lg:text-5xl font-bold text-[#222] mt-4">
+      <div style={{ fontFamily: 'Poppins, sans-serif', paddingTop: '80px' }}>
+        {/* Page Header */}
+        <div style={{
+          padding: '60px 20px 40px',
+          textAlign: 'center',
+          background: 'linear-gradient(135deg, #FFF8F0 0%, #FFF1E6 100%)'
+        }}>
+          <span style={{
+            display: 'inline-block',
+            padding: '5px 16px',
+            background: 'rgba(212, 175, 55, 0.08)',
+            color: '#D4AF37',
+            fontSize: '12px',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            borderRadius: '50px',
+            marginBottom: '10px'
+          }}>
+            Shop
+          </span>
+          <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: '40px', fontWeight: '700', color: '#222', marginBottom: '10px' }}>
             Premium Henna Products
           </h1>
-          <p className="text-gray-600 mt-4 max-w-lg mx-auto">
-            Quality products for beautiful, long-lasting results. All natural, carefully sourced.
+          <p style={{ color: '#666', maxWidth: '500px', margin: '0 auto' }}>
+            Quality products for beautiful, long-lasting results
           </p>
         </div>
-      </section>
 
-      {/* Filters */}
-      <section className="py-6 bg-white border-y border-[#e8ddd4] sticky top-16 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-1 min-w-[200px]">
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={filters.search}
-                onChange={(e) => { setFilters(prev => ({ ...prev, search: e.target.value })); setPage(1) }}
-                className="w-full px-4 py-2.5 border-2 border-[#e8ddd4] rounded-full focus:outline-none focus:border-[#D4AF37] text-sm"
-              />
-            </div>
+        {/* Filters */}
+        <div style={{ padding: '16px 20px', background: '#fff', borderBottom: '1px solid #e8ddd4' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={filters.search}
+              onChange={(e) => { setFilters(prev => ({ ...prev, search: e.target.value })); setPage(1) }}
+              style={{
+                flex: 1,
+                minWidth: '180px',
+                padding: '10px 16px',
+                border: '2px solid #e8ddd4',
+                borderRadius: '50px',
+                fontSize: '13px',
+                outline: 'none',
+                fontFamily: 'Poppins, sans-serif'
+              }}
+            />
             <select
               value={filters.category}
               onChange={(e) => { setFilters(prev => ({ ...prev, category: e.target.value })); setPage(1) }}
-              className="px-4 py-2.5 border-2 border-[#e8ddd4] rounded-full focus:outline-none focus:border-[#D4AF37] text-sm bg-white"
+              style={{ padding: '10px 16px', border: '2px solid #e8ddd4', borderRadius: '50px', fontSize: '13px', background: '#fff', fontFamily: 'Poppins, sans-serif' }}
             >
               <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
+              {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
           </div>
         </div>
-      </section>
 
-      {/* Products Grid */}
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Products Grid */}
+        <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
           {isLoading ? (
-            <Loader />
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <i className="fas fa-spinner fa-spin" style={{ fontSize: '32px', color: '#D4AF37' }}></i>
+            </div>
           ) : products.length === 0 ? (
-            <div className="text-center py-20">
-              <i className="fas fa-box-open text-6xl text-gray-300 mb-6"></i>
-              <h3 className="font-playfair text-2xl font-semibold text-gray-600 mb-2">No Products Found</h3>
-              <p className="text-gray-500">Check back soon for new products</p>
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <i className="fas fa-box-open" style={{ fontSize: '48px', color: '#ddd', marginBottom: '16px' }}></i>
+              <p style={{ color: '#666', fontSize: '18px' }}>No products found</p>
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product, index) => {
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              gap: '20px'
+            }}>
+              {products.map((product) => {
                 const isOutOfStock = product.stock_quantity === 0
-                const isLowStock = product.stock_quantity <= product.low_stock_threshold && product.stock_quantity > 0
 
                 return (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-white rounded-2xl overflow-hidden border border-[#e8ddd4] hover:shadow-xl transition-all duration-300"
-                  >
-                    <Link to={`/products/${product.slug}`} className="relative block">
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full h-56 object-cover hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                      {isOutOfStock && (
-                        <span className="absolute top-3 left-3 px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">
-                          Out of Stock
-                        </span>
-                      )}
-                      {isLowStock && (
-                        <span className="absolute top-3 left-3 px-3 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full">
-                          Low Stock: {product.stock_quantity} left
-                        </span>
-                      )}
-                      {product.sale_price && product.sale_price < product.price && (
-                        <span className="absolute top-3 right-3 px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
-                          Sale
-                        </span>
-                      )}
-                    </Link>
-                    <div className="p-5">
-                      <Link to={`/products/${product.slug}`}>
-                        <h3 className="font-playfair font-semibold text-lg mb-1 hover:text-[#8B5E3C] transition-colors">
-                          {product.name}
-                        </h3>
-                      </Link>
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                        {product.short_description || product.description}
-                      </p>
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          {product.sale_price ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[#8B5E3C] font-bold text-lg">
-                                ₦{parseFloat(product.sale_price).toLocaleString()}
-                              </span>
-                              <span className="text-gray-400 text-sm line-through">
-                                ₦{parseFloat(product.price).toLocaleString()}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-[#8B5E3C] font-bold text-lg">
-                              ₦{parseFloat(product.price).toLocaleString()}
-                            </span>
-                          )}
+                  <div key={product.id} style={{
+                    background: '#fff',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+                    transition: 'transform 0.2s, box-shadow 0.2s'
+                  }}>
+                    <Link to={`/products/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {product.image_url ? (
+                        <img
+                          src={getImageUrl(product.image_url)}
+                          alt={product.name}
+                          style={{
+                            width: '100%',
+                            height: '220px',
+                            objectFit: 'cover',
+                            display: 'block'
+                          }}
+                          onError={(e) => {
+                            e.target.onerror = null
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '220px',
+                          background: '#f9fafb',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <i className="fas fa-image" style={{ fontSize: '40px', color: '#ddd' }}></i>
                         </div>
-                        {!isOutOfStock && (
-                          <span className="text-xs text-green-600 font-semibold">
-                            In Stock: {product.stock_quantity}
-                          </span>
-                        )}
+                      )}
+                      <div style={{ padding: '16px' }}>
+                        <h3 style={{ fontWeight: '600', fontSize: '16px', marginBottom: '4px' }}>{product.name}</h3>
+                        <p style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
+                          {product.short_description || product.description?.substring(0, 60)}
+                        </p>
+                        <p style={{ fontSize: '18px', color: '#8B5E3C', fontWeight: '700', marginBottom: '12px' }}>
+                          ₦{parseFloat(product.price || 0).toLocaleString()}
+                        </p>
                       </div>
+                    </Link>
+                    <div style={{ padding: '0 16px 16px' }}>
                       <button
                         onClick={() => addToCart(product)}
                         disabled={isOutOfStock}
-                        className={`w-full py-3 rounded-full font-semibold text-sm transition-all duration-200 ${
-                          isOutOfStock
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'bg-[#8B5E3C] text-white hover:bg-[#6B4423] shadow-md hover:shadow-lg'
-                        }`}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: isOutOfStock ? '#f3f4f6' : '#8B5E3C',
+                          color: isOutOfStock ? '#999' : '#fff',
+                          border: 'none',
+                          borderRadius: '50px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                          fontFamily: 'Poppins, sans-serif'
+                        }}
                       >
                         <i className="fas fa-shopping-cart mr-2"></i>
                         {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
                       </button>
                     </div>
-                  </motion.div>
+                  </div>
                 )
               })}
             </div>
@@ -191,28 +199,44 @@ function ProductsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-3 mt-12">
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '40px' }}>
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="w-10 h-10 bg-white border-2 border-[#e8ddd4] rounded-full flex items-center justify-center text-[#8B5E3C] hover:border-[#D4AF37] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#fff',
+                  border: '2px solid #e8ddd4',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  opacity: page === 1 ? 0.5 : 1
+                }}
               >
                 <i className="fas fa-chevron-left"></i>
               </button>
-              <span className="text-sm font-semibold text-gray-600">
+              <span style={{ padding: '10px', fontWeight: '600', color: '#666' }}>
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="w-10 h-10 bg-white border-2 border-[#e8ddd4] rounded-full flex items-center justify-center text-[#8B5E3C] hover:border-[#D4AF37] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#fff',
+                  border: '2px solid #e8ddd4',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  opacity: page === totalPages ? 0.5 : 1
+                }}
               >
                 <i className="fas fa-chevron-right"></i>
               </button>
             </div>
           )}
         </div>
-      </section>
+      </div>
     </>
   )
 }
