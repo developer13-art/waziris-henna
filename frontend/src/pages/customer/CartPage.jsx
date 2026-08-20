@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import { useCart } from '../../context/CartContext'
+import { getImageUrl } from '../../utils/imageUrl'
 
 function CartPage() {
   const { items, subtotal, totalItems, updateQuantity, removeFromCart, clearCart } = useCart()
@@ -59,9 +60,13 @@ function CartPage() {
                       className="bg-white rounded-2xl p-4 shadow-md flex gap-4 items-center"
                     >
                       <img
-                        src={item.image_url}
+                        src={getImageUrl(item.image_url)}
                         alt={item.name}
-                        className="w-24 h-24 rounded-xl object-cover flex-shrink-0"
+                        style={{ width: '70px', height: '70px', borderRadius: '8px', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.onerror = null
+                          e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'
+                        }}
                       />
                       <div className="flex-1">
                         <h3 className="font-playfair font-semibold mb-1">{item.name}</h3>

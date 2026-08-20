@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import api, { endpoints } from '../../services/api'
-import Loader from '../../components/common/Loader'
 import { useFavorites } from '../../context/FavoritesContext'
+import { getImageUrl } from '../../utils/imageUrl'
 import { toast } from 'react-toastify'
 
 function DesignDetailPage() {
@@ -12,6 +11,7 @@ function DesignDetailPage() {
   const [design, setDesign] = useState(null)
   const [similarDesigns, setSimilarDesigns] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [imageError, setImageError] = useState(false)
   const { toggleFavorite, isFavorite } = useFavorites()
 
   useEffect(() => {
@@ -20,105 +20,207 @@ function DesignDetailPage() {
 
   const fetchDesign = async () => {
     setIsLoading(true)
+    setImageError(false)
     try {
       const response = await api.get(`${endpoints.designs}/${slug}`)
+      console.log('Design data:', response.data)
       setDesign(response.data)
-      
-      // Fetch similar designs
-      const similarRes = await api.get(`${endpoints.designs}/${response.data.id}/similar`)
-      setSimilarDesigns(similarRes.data || [])
+
+      if (response.data?.id) {
+        try {
+          const similarRes = await api.get(endpoints.similarDesigns(response.data.id))
+          setSimilarDesigns(Array.isArray(similarRes.data) ? similarRes.data : [])
+        } catch (err) {
+          console.error('Error fetching similar designs:', err)
+          setSimilarDesigns([])
+        }
+      }
     } catch (error) {
       console.error('Error fetching design:', error)
       toast.error('Failed to load design')
+      setDesign(null)
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (isLoading) return <Loader />
-  if (!design) return <div className="text-center py-20">Design not found</div>
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <i className="fas fa-spinner fa-spin" style={{ fontSize: '32px', color: '#D4AF37' }}></i>
+      </div>
+    )
+  }
+
+  if (!design) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 20px', fontFamily: 'Poppins, sans-serif' }}>
+        <i className="fas fa-search" style={{ fontSize: '48px', color: '#ddd', marginBottom: '16px' }}></i>
+        <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Design Not Found</h2>
+        <Link to="/designs" style={{ color: '#8B5E3C', fontWeight: '600' }}>← Back to Designs</Link>
+      </div>
+    )
+  }
+
+  const designImageUrl = getImageUrl(design.image_url)
+  console.log('Design image URL:', designImageUrl)
 
   return (
     <>
       <Helmet>
         <title>{design.title} | Waziri's Henna</title>
-        <meta name="description" content={design.description?.substring(0, 160)} />
       </Helmet>
 
-      <section className="pt-32 pb-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12">
-            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}>
+      <div style={{ fontFamily: 'Poppins, sans-serif', padding: '120px 20px 60px', maxWidth: '1100px', margin: '0 auto' }}>
+        <Link to="/designs" style={{ color: '#8B5E3C', textDecoration: 'none', fontWeight: '600', fontSize: '14px' }}>
+          <i className="fas fa-arrow-left mr-2"></i> Back to Designs
+        </Link>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px', marginTop: '30px' }}>
+          {/* Image Section */}
+          <div>
+            {design.image_url && !imageError ? (
               <img
-                src={design.image_url}
+                src={designImageUrl}
                 alt={design.title}
-                className="rounded-3xl shadow-2xl border-4 border-white w-full h-[500px] object-cover"
+                style={{
+                  width: '100%',
+                  height: '500px',
+                  objectFit: 'cover',
+                  borderRadius: '20px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                  border: '4px solid #fff',
+                  display: 'block'
+                }}
+                onError={(e) => {
+                  console.error('Image failed to load:', designImageUrl)
+                  setImageError(true)
+                }}
               />
-            </motion.div>
-            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-              <div>
-                <span className="section-tag">{design.category_name || 'Design'}</span>
-                <h1 className="font-playfair text-4xl font-bold mt-3">{design.title}</h1>
+            ) : (
+              <div style={{
+                width: '100%',
+                height: '500px',
+                background: '#f9fafb',
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <i className="fas fa-image" style={{ fontSize: '60px', color: '#ddd' }}></i>
+                <p style={{ color: '#999' }}>No image available</p>
               </div>
-              
-              <div className="flex flex-wrap gap-2">
-                {design.style && <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">{design.style}</span>}
-                {design.occasion && <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">{design.occasion}</span>}
-                {design.body_area && <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">{design.body_area}</span>}
-                <span className="px-3 py-1 bg-[#D4AF37]/10 text-[#8B5E3C] rounded-full text-sm">{design.complexity}</span>
-              </div>
-
-              <p className="text-gray-600 leading-relaxed">{design.description}</p>
-
-              {design.price && (
-                <p className="text-[#8B5E3C] font-bold text-2xl">
-                  ₦{parseFloat(design.price).toLocaleString()}
-                </p>
-              )}
-
-              <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span><i className="fas fa-eye mr-1"></i>{design.views_count || 0} views</span>
-                <span><i className="fas fa-heart mr-1"></i>{design.saves_count || 0} saves</span>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <Link
-                  to={`/booking?design=${design.id}`}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-[#D4AF37] text-white font-semibold rounded-full hover:bg-[#b8941f] transition-colors"
-                >
-                  <i className="fas fa-calendar-check"></i> Book This Design
-                </Link>
-                <button
-                  onClick={() => toggleFavorite(design)}
-                  className="inline-flex items-center gap-2 px-8 py-4 border-2 border-[#D4AF37] text-[#8B5E3C] font-semibold rounded-full hover:bg-[#D4AF37] hover:text-white transition-colors"
-                >
-                  <i className={`${isFavorite(design.id) ? 'fas text-red-500' : 'far'} fa-heart`}></i>
-                  {isFavorite(design.id) ? 'Saved' : 'Save Design'}
-                </button>
-              </div>
-            </motion.div>
+            )}
           </div>
 
-          {similarDesigns.length > 0 && (
-            <div className="mt-20">
-              <h2 className="font-playfair text-2xl font-bold mb-8">Similar Designs</h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {similarDesigns.map((similar) => (
-                  <Link key={similar.id} to={`/designs/${similar.slug}`} className="group">
-                    <img
-                      src={similar.image_url}
-                      alt={similar.title}
-                      className="rounded-2xl h-64 w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <h3 className="font-semibold mt-3">{similar.title}</h3>
-                    <p className="text-sm text-gray-500">{similar.style}</p>
-                  </Link>
-                ))}
-              </div>
+          {/* Details Section */}
+          <div>
+            <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: '700', marginBottom: '16px' }}>
+              {design.title}
+            </h1>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+              {design.style && (
+                <span style={{ padding: '4px 12px', background: '#f3f4f6', borderRadius: '50px', fontSize: '13px' }}>
+                  {design.style}
+                </span>
+              )}
+              {design.occasion && (
+                <span style={{ padding: '4px 12px', background: '#f3f4f6', borderRadius: '50px', fontSize: '13px' }}>
+                  {design.occasion}
+                </span>
+              )}
+              {design.body_area && (
+                <span style={{ padding: '4px 12px', background: '#f3f4f6', borderRadius: '50px', fontSize: '13px' }}>
+                  {design.body_area}
+                </span>
+              )}
+              <span style={{ padding: '4px 12px', background: 'rgba(212, 175, 55, 0.1)', color: '#8B5E3C', borderRadius: '50px', fontSize: '13px' }}>
+                {design.complexity}
+              </span>
             </div>
-          )}
+
+            {design.description && (
+              <p style={{ color: '#666', lineHeight: '1.8', marginBottom: '20px' }}>
+                {design.description}
+              </p>
+            )}
+
+            {design.price && (
+              <p style={{ fontSize: '28px', color: '#8B5E3C', fontWeight: '700', marginBottom: '20px' }}>
+                ₦{parseFloat(design.price).toLocaleString()}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <Link
+                to={`/booking?design=${design.id}`}
+                style={{
+                  padding: '14px 28px',
+                  background: '#D4AF37',
+                  color: '#fff',
+                  borderRadius: '50px',
+                  textDecoration: 'none',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}
+              >
+                <i className="fas fa-calendar-check mr-2"></i> Book This Design
+              </Link>
+              <button
+                onClick={() => toggleFavorite(design)}
+                style={{
+                  padding: '14px 28px',
+                  background: isFavorite(design.id) ? '#ef4444' : '#fff',
+                  color: isFavorite(design.id) ? '#fff' : '#8B5E3C',
+                  border: `2px solid ${isFavorite(design.id) ? '#ef4444' : '#D4AF37'}`,
+                  borderRadius: '50px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  fontFamily: 'Poppins, sans-serif'
+                }}
+              >
+                <i className={`${isFavorite(design.id) ? 'fas' : 'far'} fa-heart mr-2`}></i>
+                {isFavorite(design.id) ? 'Saved' : 'Save Design'}
+              </button>
+            </div>
+          </div>
         </div>
-      </section>
+
+        {/* Similar Designs */}
+        {similarDesigns.length > 0 && (
+          <div style={{ marginTop: '60px' }}>
+            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: '700', marginBottom: '20px' }}>
+              Similar Designs
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+              {similarDesigns.map((similar) => (
+                <Link key={similar.id} to={`/designs/${similar.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  {similar.image_url ? (
+                    <img
+                      src={getImageUrl(similar.image_url)}
+                      alt={similar.title}
+                      style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '12px' }}
+                      onError={(e) => {
+                        e.target.onerror = null
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'
+                      }}
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: '200px', background: '#f9fafb', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fas fa-image" style={{ fontSize: '40px', color: '#ddd' }}></i>
+                    </div>
+                  )}
+                  <p style={{ fontWeight: '600', fontSize: '14px', marginTop: '8px' }}>{similar.title}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </>
   )
 }

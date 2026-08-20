@@ -8,15 +8,21 @@ import CustomerLayout from './components/customer/layout/CustomerLayout'
 const HomePage = lazy(() => import('./pages/customer/HomePage'))
 const AboutPage = lazy(() => import('./pages/customer/AboutPage'))
 const ServicesPage = lazy(() => import('./pages/customer/ServicesPage'))
+const ServiceDetailPage = lazy(() => import('./pages/customer/ServiceDetailPage'))
 const DesignsPage = lazy(() => import('./pages/customer/DesignsPage'))
+const DesignDetailPage = lazy(() => import('./pages/customer/DesignDetailPage'))
 const DesignFinderPage = lazy(() => import('./pages/customer/DesignFinderPage'))
 const ProductsPage = lazy(() => import('./pages/customer/ProductsPage'))
+const ProductDetailPage = lazy(() => import('./pages/customer/ProductDetailPage'))
 const CartPage = lazy(() => import('./pages/customer/CartPage'))
 const CheckoutPage = lazy(() => import('./pages/customer/CheckoutPage'))
 const BookingPage = lazy(() => import('./pages/customer/BookingPage'))
+const BookingSuccessPage = lazy(() => import('./pages/customer/BookingSuccessPage'))
 const JournalPage = lazy(() => import('./pages/customer/JournalPage'))
+const ArticleDetailPage = lazy(() => import('./pages/customer/ArticleDetailPage'))
 const FavoritesPage = lazy(() => import('./pages/customer/FavoritesPage'))
 const ContactPage = lazy(() => import('./pages/customer/ContactPage'))
+const PaymentStatusPage = lazy(() => import('./pages/customer/PaymentStatusPage'))
 
 // Lazy load admin pages
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'))
@@ -43,7 +49,19 @@ function Loader() {
       background: '#FFF8F0',
       fontFamily: 'Poppins, sans-serif'
     }}>
-      <p style={{ color: '#8B5E3C', fontSize: '18px' }}>Loading...</p>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{
+          width: '50px',
+          height: '50px',
+          border: '4px solid #e8ddd4',
+          borderTopColor: '#D4AF37',
+          borderRadius: '50%',
+          margin: '0 auto 20px',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <p style={{ color: '#8B5E3C', fontSize: '18px' }}>Loading...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </div>
   )
 }
@@ -65,15 +83,21 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
+          <Route path="/services/:slug" element={<ServiceDetailPage />} />
           <Route path="/designs" element={<DesignsPage />} />
+          <Route path="/designs/:slug" element={<DesignDetailPage />} />
           <Route path="/design-finder" element={<DesignFinderPage />} />
           <Route path="/products" element={<ProductsPage />} />
+          <Route path="/products/:slug" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/booking" element={<BookingPage />} />
+          <Route path="/booking/success/:reference" element={<BookingSuccessPage />} />
           <Route path="/journal" element={<JournalPage />} />
+          <Route path="/journal/:slug" element={<ArticleDetailPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/payment/:status/:reference" element={<PaymentStatusPage />} />
         </Route>
 
         {/* ==================== ADMIN LOGIN (No Layout) ==================== */}

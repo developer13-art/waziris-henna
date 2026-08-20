@@ -22,7 +22,7 @@ class DesignController
                 if ($id && $action === 'similar') {
                     $this->getSimilarDesigns((int)$id);
                 } elseif ($id) {
-                    $this->getDesign((int)$id);
+                    $this->getDesign($id);  // Pass $id as-is (could be ID or slug)
                 } else {
                     $this->getAllDesigns();
                 }
@@ -107,22 +107,30 @@ class DesignController
         Response::paginated($designs, $total, $page, $perPage);
     }
 
-    private function getDesign(int $id): void
+    private function getDesign($id): void
     {
-        $sql = "SELECT d.*, c.name as category_name 
-                FROM designs d 
-                LEFT JOIN design_categories c ON d.category_id = c.id 
-                WHERE d.id = ? AND d.is_active = 1";
-        
-        $design = $this->db->queryOne($sql, [$id]);
-        
+        // Check if the parameter is a numeric ID or a slug
+        if (is_numeric($id)) {
+            $sql = "SELECT d.*, c.name as category_name 
+                    FROM designs d 
+                    LEFT JOIN design_categories c ON d.category_id = c.id 
+                    WHERE d.id = ? AND d.is_active = 1";
+            $design = $this->db->queryOne($sql, [(int)$id]);
+        } else {
+            $sql = "SELECT d.*, c.name as category_name 
+                    FROM designs d 
+                    LEFT JOIN design_categories c ON d.category_id = c.id 
+                    WHERE d.slug = ? AND d.is_active = 1";
+            $design = $this->db->queryOne($sql, [$id]);
+        }
+
         if (!$design) {
             Response::error('Design not found', 404);
         }
-        
+
         // Increment views
-        $this->db->query("UPDATE designs SET views_count = views_count + 1 WHERE id = ?", [$id]);
-        
+        $this->db->query("UPDATE designs SET views_count = views_count + 1 WHERE id = ?", [(int)$design['id']]);
+
         Response::success($design, 'Design retrieved successfully');
     }
 

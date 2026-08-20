@@ -22,11 +22,12 @@ class ProductController
                 if ($id && $action === 'inventory') {
                     $this->getInventoryHistory((int)$id);
                 } elseif ($id) {
-                    $this->getProduct((int)$id);
+                    $this->getProduct($id);  // Pass $id as-is (could be ID or slug)
                 } else {
                     $this->getAllProducts();
                 }
                 break;
+                
             case 'POST':
                 if ($id && $action === 'inventory') {
                     $this->adjustInventory((int)$id);
@@ -34,21 +35,23 @@ class ProductController
                     $this->createProduct();
                 }
                 break;
+                
             case 'PUT':
                 if ($id) {
                     $this->updateProduct((int)$id);
                 }
                 break;
+                
             case 'DELETE':
                 if ($id) {
                     $this->deleteProduct((int)$id);
                 }
                 break;
+                
             default:
                 Response::error('Method not allowed', 405);
         }
     }
-
     private function getAllProducts(): void
     {
         $page = (int)($_GET['page'] ?? 1);
@@ -87,10 +90,16 @@ class ProductController
         Response::paginated($products, $total, $page, $perPage);
     }
 
-    private function getProduct(int $id): void
+    private function getProduct($id): void
     {
-        $sql = "SELECT * FROM products WHERE id = ? AND is_active = 1";
-        $product = $this->db->queryOne($sql, [$id]);
+        // Check if the parameter is a numeric ID or a slug
+        if (is_numeric($id)) {
+            $sql = "SELECT * FROM products WHERE id = ? AND is_active = 1";
+            $product = $this->db->queryOne($sql, [(int)$id]);
+        } else {
+            $sql = "SELECT * FROM products WHERE slug = ? AND is_active = 1";
+            $product = $this->db->queryOne($sql, [$id]);
+        }
 
         if (!$product) {
             Response::error('Product not found', 404);

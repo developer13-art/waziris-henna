@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import { useFavorites } from '../../context/FavoritesContext'
+import { getImageUrl } from '../../utils/imageUrl'
 
 function FavoritesPage() {
   const { designs, toggleFavorite, clearFavorites } = useFavorites()
@@ -67,9 +68,13 @@ function FavoritesPage() {
                     >
                       <Link to={`/designs/${design.slug}`}>
                         <img
-                          src={design.image_url}
+                          src={getImageUrl(design.image_url)}
                           alt={design.title}
-                          className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-64 object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                           <div className="text-white">

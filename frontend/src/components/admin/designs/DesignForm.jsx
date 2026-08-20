@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ImageUpload from '../../common/ImageUpload'
+import api, { endpoints } from '../../../services/api'
 
 function DesignForm({ design, categories, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -38,6 +39,43 @@ function DesignForm({ design, categories, onSave, onCancel }) {
     onSave(cleanedData)
   }
 
+  // Style options
+  const styleOptions = [
+    'Traditional Hausa',
+    'Arabic',
+    'Floral',
+    'Minimalist',
+    'Geometric',
+    'Modern',
+    'Classic',
+  ]
+
+  // Occasion options
+  const occasionOptions = [
+    'Wedding',
+    'Eid',
+    'Birthday',
+    'Casual',
+    'Naming Ceremony',
+    'Engagement',
+    'Anniversary',
+    'Other',
+  ]
+
+  // Body area options
+  const bodyAreaOptions = [
+    'Hands',
+    'Feet',
+    'Both',
+  ]
+
+  // Complexity options
+  const complexityOptions = [
+    'Simple',
+    'Medium',
+    'Intricate',
+  ]
+
   return (
     <form onSubmit={handleSubmit} style={{
       background: '#fff',
@@ -54,14 +92,14 @@ function DesignForm({ design, categories, onSave, onCancel }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
         {/* Title */}
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Title *</label>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Design Title *</label>
           <input
             type="text"
             name="title"
             value={formData.title}
             onChange={handleChange}
             required
-            placeholder="Enter design title"
+            placeholder="e.g., Royal Hausa Bridal"
             style={{
               width: '100%',
               padding: '12px',
@@ -74,7 +112,7 @@ function DesignForm({ design, categories, onSave, onCancel }) {
           />
         </div>
 
-        {/* Category */}
+        {/* Category - DROPDOWN */}
         <div>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Category</label>
           <select
@@ -89,25 +127,24 @@ function DesignForm({ design, categories, onSave, onCancel }) {
               fontSize: '14px',
               outline: 'none',
               background: '#fff',
-              fontFamily: 'Poppins, sans-serif'
+              fontFamily: 'Poppins, sans-serif',
+              cursor: 'pointer'
             }}
           >
-            <option value="">No Category</option>
+            <option value="">Select Category</option>
             {categories.map(cat => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
         </div>
 
-        {/* Style */}
+        {/* Style - DROPDOWN */}
         <div>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Style</label>
-          <input
-            type="text"
+          <select
             name="style"
             value={formData.style}
             onChange={handleChange}
-            placeholder="e.g., Floral, Arabic, Traditional"
             style={{
               width: '100%',
               padding: '12px',
@@ -115,20 +152,25 @@ function DesignForm({ design, categories, onSave, onCancel }) {
               borderRadius: '8px',
               fontSize: '14px',
               outline: 'none',
-              fontFamily: 'Poppins, sans-serif'
+              background: '#fff',
+              fontFamily: 'Poppins, sans-serif',
+              cursor: 'pointer'
             }}
-          />
+          >
+            <option value="">Select Style</option>
+            {styleOptions.map(style => (
+              <option key={style} value={style}>{style}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Occasion */}
+        {/* Occasion - DROPDOWN */}
         <div>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Occasion</label>
-          <input
-            type="text"
+          <select
             name="occasion"
             value={formData.occasion}
             onChange={handleChange}
-            placeholder="e.g., Wedding, Eid, Birthday"
             style={{
               width: '100%',
               padding: '12px',
@@ -136,12 +178,19 @@ function DesignForm({ design, categories, onSave, onCancel }) {
               borderRadius: '8px',
               fontSize: '14px',
               outline: 'none',
-              fontFamily: 'Poppins, sans-serif'
+              background: '#fff',
+              fontFamily: 'Poppins, sans-serif',
+              cursor: 'pointer'
             }}
-          />
+          >
+            <option value="">Select Occasion</option>
+            {occasionOptions.map(occasion => (
+              <option key={occasion} value={occasion}>{occasion}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Body Area */}
+        {/* Body Area - DROPDOWN */}
         <div>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Body Area</label>
           <select
@@ -156,17 +205,18 @@ function DesignForm({ design, categories, onSave, onCancel }) {
               fontSize: '14px',
               outline: 'none',
               background: '#fff',
-              fontFamily: 'Poppins, sans-serif'
+              fontFamily: 'Poppins, sans-serif',
+              cursor: 'pointer'
             }}
           >
-            <option value="">Select Area</option>
-            <option value="Hands">Hands</option>
-            <option value="Feet">Feet</option>
-            <option value="Both">Both</option>
+            <option value="">Select Body Area</option>
+            {bodyAreaOptions.map(area => (
+              <option key={area} value={area}>{area}</option>
+            ))}
           </select>
         </div>
 
-        {/* Complexity */}
+        {/* Complexity - DROPDOWN */}
         <div>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>Complexity</label>
           <select
@@ -181,12 +231,13 @@ function DesignForm({ design, categories, onSave, onCancel }) {
               fontSize: '14px',
               outline: 'none',
               background: '#fff',
-              fontFamily: 'Poppins, sans-serif'
+              fontFamily: 'Poppins, sans-serif',
+              cursor: 'pointer'
             }}
           >
-            <option value="Simple">Simple</option>
-            <option value="Medium">Medium</option>
-            <option value="Intricate">Intricate</option>
+            {complexityOptions.map(level => (
+              <option key={level} value={level}>{level}</option>
+            ))}
           </select>
         </div>
 

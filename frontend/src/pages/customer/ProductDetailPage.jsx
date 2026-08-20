@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import api, { endpoints } from '../../services/api'
-import Loader from '../../components/common/Loader'
 import { useCart } from '../../context/CartContext'
+import { getImageUrl } from '../../utils/imageUrl'
 import { toast } from 'react-toastify'
 
 function ProductDetailPage() {
@@ -12,6 +11,7 @@ function ProductDetailPage() {
   const [product, setProduct] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
+  const [imageError, setImageError] = useState(false)
   const { addToCart } = useCart()
 
   useEffect(() => {
@@ -20,19 +20,40 @@ function ProductDetailPage() {
 
   const fetchProduct = async () => {
     setIsLoading(true)
+    setImageError(false)
     try {
       const response = await api.get(`${endpoints.products}/${slug}`)
+      console.log('Product data:', response.data)
       setProduct(response.data)
     } catch (error) {
       console.error('Error fetching product:', error)
       toast.error('Failed to load product')
+      setProduct(null)
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (isLoading) return <Loader />
-  if (!product) return <div className="text-center py-20">Product not found</div>
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <i className="fas fa-spinner fa-spin" style={{ fontSize: '32px', color: '#D4AF37' }}></i>
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 20px', fontFamily: 'Poppins, sans-serif' }}>
+        <i className="fas fa-box-open" style={{ fontSize: '48px', color: '#ddd', marginBottom: '16px' }}></i>
+        <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Product Not Found</h2>
+        <Link to="/products" style={{ color: '#8B5E3C', fontWeight: '600' }}>← Back to Products</Link>
+      </div>
+    )
+  }
+
+  const productImageUrl = getImageUrl(product.image_url)
+  console.log('Product image URL:', productImageUrl)
 
   const isOutOfStock = product.stock_quantity === 0
 
@@ -40,85 +61,129 @@ function ProductDetailPage() {
     <>
       <Helmet>
         <title>{product.name} | Waziri's Henna</title>
-        <meta name="description" content={product.description?.substring(0, 160)} />
       </Helmet>
 
-      <section className="pt-32 pb-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12">
-            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}>
+      <div style={{ fontFamily: 'Poppins, sans-serif', padding: '120px 20px 60px', maxWidth: '1100px', margin: '0 auto' }}>
+        <Link to="/products" style={{ color: '#8B5E3C', textDecoration: 'none', fontWeight: '600', fontSize: '14px' }}>
+          <i className="fas fa-arrow-left mr-2"></i> Back to Products
+        </Link>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px', marginTop: '30px' }}>
+          {/* Image Section */}
+          <div>
+            {product.image_url && !imageError ? (
               <img
-                src={product.image_url}
+                src={productImageUrl}
                 alt={product.name}
-                className="rounded-3xl shadow-2xl border-4 border-white w-full h-[400px] object-cover"
+                style={{
+                  width: '100%',
+                  height: '400px',
+                  objectFit: 'cover',
+                  borderRadius: '20px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                  border: '4px solid #fff',
+                  display: 'block'
+                }}
+                onError={(e) => {
+                  console.error('Product image failed to load:', productImageUrl)
+                  setImageError(true)
+                }}
               />
-            </motion.div>
-            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-              <div>
-                <span className="section-tag">{product.category || 'Product'}</span>
-                <h1 className="font-playfair text-4xl font-bold mt-3">{product.name}</h1>
+            ) : (
+              <div style={{
+                width: '100%',
+                height: '400px',
+                background: '#f9fafb',
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <i className="fas fa-image" style={{ fontSize: '60px', color: '#ddd' }}></i>
+                <p style={{ color: '#999' }}>No image available</p>
               </div>
+            )}
+          </div>
 
-              {product.sale_price ? (
-                <div className="flex items-center gap-3">
-                  <span className="text-[#8B5E3C] font-bold text-3xl">
-                    ₦{parseFloat(product.sale_price).toLocaleString()}
-                  </span>
-                  <span className="text-gray-400 text-xl line-through">
-                    ₦{parseFloat(product.price).toLocaleString()}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-[#8B5E3C] font-bold text-3xl">
-                  ₦{parseFloat(product.price).toLocaleString()}
-                </span>
-              )}
+          {/* Details Section */}
+          <div>
+            <span style={{
+              display: 'inline-block',
+              padding: '4px 12px',
+              background: 'rgba(212, 175, 55, 0.1)',
+              color: '#8B5E3C',
+              borderRadius: '50px',
+              fontSize: '12px',
+              fontWeight: '600',
+              marginBottom: '10px'
+            }}>
+              {product.category || 'Product'}
+            </span>
 
-              <p className="text-gray-600 leading-relaxed">{product.description}</p>
+            <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: '32px', fontWeight: '700', marginBottom: '16px' }}>
+              {product.name}
+            </h1>
 
-              <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  isOutOfStock ? 'bg-red-100 text-red-700' :
-                  product.stock_quantity <= product.low_stock_threshold ? 'bg-orange-100 text-orange-700' :
-                  'bg-green-100 text-green-700'
-                }`}>
-                  {isOutOfStock ? 'Out of Stock' : `In Stock: ${product.stock_quantity}`}
-                </span>
-              </div>
+            <p style={{ fontSize: '28px', color: '#8B5E3C', fontWeight: '700', marginBottom: '16px' }}>
+              ₦{parseFloat(product.price || 0).toLocaleString()}
+            </p>
 
-              {!isOutOfStock && (
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                      className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200"
-                    >
-                      <i className="fas fa-minus text-sm"></i>
-                    </button>
-                    <span className="font-semibold w-10 text-center">{quantity}</span>
-                    <button
-                      onClick={() => setQuantity(q => Math.min(product.stock_quantity, q + 1))}
-                      className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200"
-                    >
-                      <i className="fas fa-plus text-sm"></i>
-                    </button>
-                  </div>
+            <p style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              color: isOutOfStock ? '#ef4444' : '#10b981',
+              marginBottom: '20px'
+            }}>
+              {isOutOfStock ? 'Out of Stock' : `In Stock: ${product.stock_quantity} units`}
+            </p>
+
+            {product.description && (
+              <p style={{ color: '#666', lineHeight: '1.8', marginBottom: '20px' }}>
+                {product.description}
+              </p>
+            )}
+
+            {!isOutOfStock && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
-                    onClick={() => addToCart(product, quantity)}
-                    className="flex-1 py-4 bg-[#8B5E3C] text-white font-bold rounded-full hover:bg-[#6B4423] transition-colors"
+                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    style={{ width: '36px', height: '36px', background: '#f3f4f6', border: 'none', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}
                   >
-                    <i className="fas fa-shopping-cart mr-2"></i> Add to Cart
+                    −
+                  </button>
+                  <span style={{ fontWeight: '600', fontSize: '18px', minWidth: '30px', textAlign: 'center' }}>{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(q => Math.min(product.stock_quantity, q + 1))}
+                    style={{ width: '36px', height: '36px', background: '#f3f4f6', border: 'none', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}
+                  >
+                    +
                   </button>
                 </div>
-              )}
-
-              <Link to="/products" className="inline-block text-[#8B5E3C] font-semibold hover:text-[#D4AF37]">
-                <i className="fas fa-arrow-left mr-2"></i> Back to Products
-              </Link>
-            </motion.div>
+                <button
+                  onClick={() => addToCart(product, quantity)}
+                  style={{
+                    flex: 1,
+                    padding: '14px 24px',
+                    background: '#8B5E3C',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '50px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontFamily: 'Poppins, sans-serif'
+                  }}
+                >
+                  <i className="fas fa-shopping-cart mr-2"></i> Add to Cart
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      </section>
+      </div>
     </>
   )
 }

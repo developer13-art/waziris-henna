@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { useCart } from '../../context/CartContext'
 import api, { endpoints } from '../../services/api'
 import { toast } from 'react-toastify'
+import { getImageUrl } from '../../utils/imageUrl'
 
 function CheckoutPage() {
   const { items, subtotal, totalItems, clearCart } = useCart()
@@ -245,7 +246,15 @@ function CheckoutPage() {
             <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
               {items.map((item) => (
                 <div key={item.product_id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid #f0e8dd' }}>
-                  <img src={item.image_url} alt={item.name} style={{ width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover' }} />
+                  <img
+                    src={getImageUrl(item.image_url)}
+                    alt={item.name}
+                    style={{ width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.target.onerror = null
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'
+                    }}
+                  />
                   <div style={{ flex: 1 }}>
                     <p style={{ fontWeight: '600', fontSize: '14px' }}>{item.name}</p>
                     <p style={{ fontSize: '12px', color: '#666' }}>Qty: {item.quantity}</p>
